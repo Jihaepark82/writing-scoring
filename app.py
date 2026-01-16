@@ -23,10 +23,6 @@ def get_client() -> genai.Client:
 
 
 def pil_to_bytes_and_mime(img: Image.Image) -> Tuple[bytes, str]:
-    """
-    Streamlit camera_input은 보통 JPEG, 업로드는 PNG/JPEG 혼재.
-    안전하게 JPEG로 인코딩해 전송합니다.
-    """
     buf = io.BytesIO()
     rgb = img.convert("RGB")
     rgb.save(buf, format="JPEG", quality=95)
@@ -48,7 +44,8 @@ def ocr_with_gemini(client: genai.Client, image_bytes: bytes, mime_type: str) ->
             types.Content(
                 role="user",
                 parts=[
-                    types.Part.from_text(prompt),
+                    # ✅ FIX: 키워드 인자로 전달
+                    types.Part.from_text(text=prompt),
                     types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
                 ],
             )
@@ -58,8 +55,7 @@ def ocr_with_gemini(client: genai.Client, image_bytes: bytes, mime_type: str) ->
             max_output_tokens=4096,
         ),
     )
-    text = (resp.text or "").strip()
-    return text
+    return (resp.text or "").strip()
 
 
 def evaluate_writing(client: genai.Client, text: str) -> str:
@@ -87,7 +83,10 @@ def evaluate_writing(client: genai.Client, text: str) -> str:
         contents=[
             types.Content(
                 role="user",
-                parts=[types.Part.from_text(prompt)],
+                parts=[
+                    # ✅ FIX: 키워드 인자로 전달
+                    types.Part.from_text(text=prompt)
+                ],
             )
         ],
         config=types.GenerateContentConfig(
@@ -133,7 +132,6 @@ with col1:
     st.subheader("입력 이미지")
     st.image(image, use_container_width=True)
 
-# 실행
 try:
     client = get_client()
 except Exception as e:
